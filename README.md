@@ -1,5 +1,28 @@
 ## Running eBPF programs with Zig
 
+This is an experiment of creating and running eBPF programs with Zig and libbpf.
+
+### Building
+
+This project requires latest zig version (`0.12.0-dev.1836+dd189a35` at the time of writing).
+
+Fetch the submodule
+
+```
+git submodule update --init --recursive
+```
+
+Build the project
+
+```
+zig build
+```
+
+BPF object is going to be saved in `src/artifacts` and the main executable is going to be placed in `zig-out/bin`.
+The customization of paths can be performed through `build.zig`.
+
+### Summary
+
 First step: compile eBPF objects via `zig build`.
 This requires using the `freestanding` OS tag and curate the endianness of target machine.
 
@@ -7,7 +30,7 @@ The produced object file can be loaded via `bpftool` to test it.
 This is how I found out the "license" section was misplaced.
 
 ```
-☁  zig-ebpf-probes  sudo bpftool prog load zig-out/bin/probes.o zig/probes/print
+☁ zig-ebpf-probes$ sudo bpftool prog load zig-out/bin/probes.o zig/probes/print
 [sudo] password for francesco: 
 libbpf: prog 'print_number': BPF program load failed: Invalid argument
 libbpf: prog 'print_number': -- BEGIN PROG LOAD LOG --
@@ -31,3 +54,7 @@ Second step: using `@embed` to load the object file inside the final binary at c
 This allows to ship the same code in a single binary.
 
 Third step: create a perf event to attach the eBPF program to.
+
+We use a beautiful library called [`zbpf`](https://github.com/tw4452852/zbpf) that took parts of the very first implementation of BPF bindings and adds libbpf support (via `cInclude`).
+The result is a main program that can load a pre-built BPF object and attach it into perf events or call other BPF utilities via libbpf helpers.
+

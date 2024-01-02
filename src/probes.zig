@@ -1,14 +1,12 @@
-const bpf = @cImport({
-    @cInclude("linux/types.h");
-    @cInclude("linux/bpf.h");
-    @cInclude("bpf/bpf_helpers.h");
-});
 const std = @import("std");
+const BPF = std.os.linux.BPF;
+const helpers = BPF.kern.helpers;
 
 export const _license linksection("license") = "GPL".*;
 
-export fn print_number(_: ?*anyopaque) linksection("perf_event") c_int {
-    const printed = bpf.bpf_trace_printk.?("Hello from Zig! The answer to every question is: {}\n", 42);
+export fn print_pid(_: ?*anyopaque) linksection("perf_event") c_int {
+    const text = "Hello from C on pid {d}!\n";
+    const printed = helpers.trace_printk(text, text.len, helpers.get_current_pid_tgid(), 0, 0);
     if (printed < 0) {
         return 1;
     }

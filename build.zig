@@ -24,15 +24,20 @@ pub fn build(b: *std.Build) void {
         .target = std.zig.CrossTarget{
             .os_tag = std.Target.Os.Tag.freestanding,
             .cpu_arch = switch (builtin.cpu.arch.endian()) {
-                .Big => .bpfeb,
-                .Little => .bpfel,
+                .big => .bpfeb,
+                .little => .bpfel,
             },
         },
     });
     ebpf.addIncludePath(.{ .path = "/usr/include" });
     // ebpf.addCSourceFile(.{ .file = ""});
     ebpf.linkLibC();
-    b.getInstallStep().dependOn(&b.addInstallFileWithDir(ebpf.getEmittedBin(), .bin, "probes.o").step);
+    b.getInstallStep().dependOn(&b.addInstallFileWithDir(ebpf.getEmittedBin(), .{ .custom = "../src/artifacts" }, "probes.o").step);
+
+    // Add the bpf dependency.
+    _ = b.addModule("zbpf", .{
+        .source_file = .{ .path = "libs/zbpf" },
+    });
 
     // This declares intent for the build to produce an executable named "zigbee".
     const exe = b.addExecutable(.{
@@ -43,6 +48,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    // Include libbpf also in main executable.
+    exe.addIncludePath(.{ .path = "/usr/include" });
+    exe.linkLibC();
+    exe.linkSystemLibrary("libbpf");
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
